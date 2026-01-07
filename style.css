@@ -234,21 +234,88 @@ body {
     background-clip: text;
 }
 
-.health-bar {
-    width: 200px;
-    height: 20px;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 10px;
-    overflow: hidden;
-    border: 2px solid rgba(255, 255, 255, 0.2);
+.health-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
 }
 
-.health-fill {
+.health-segments {
+    display: flex;
+    gap: 4px;
+    width: 220px;
+}
+
+.health-segment-wrapper {
+    flex: 1;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+}
+
+.health-segment {
     height: 100%;
     width: 100%;
-    background: linear-gradient(90deg, #f093fb 0%, #f5576c 100%);
-    transition: width 0.3s ease;
-    box-shadow: 0 0 10px rgba(245, 87, 108, 0.6);
+    background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+    transition: width 0.3s ease, background 0.5s ease, box-shadow 0.3s ease;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.6);
+    border-radius: 4px;
+}
+
+.health-text {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: #10b981;
+    text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+    transition: color 0.3s ease;
+}
+
+/* Pulse animation for low health */
+@keyframes healthPulse {
+    0%, 100% { 
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% { 
+        opacity: 0.7;
+        transform: scale(0.98);
+    }
+}
+
+.health-segment-wrapper:has(.health-segment[style*="f5576c"]) {
+    animation: healthPulse 1s ease-in-out infinite;
+}
+
+/* Critical health warning */
+.critical-warning {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #f5576c;
+    text-align: center;
+    padding: 0.5rem;
+    background: rgba(245, 87, 108, 0.2);
+    border: 2px solid #f5576c;
+    border-radius: 10px;
+    margin-bottom: 0.5rem;
+    animation: warningPulse 0.8s ease-in-out infinite;
+    text-shadow: 0 0 10px rgba(245, 87, 108, 0.8);
+}
+
+@keyframes warningPulse {
+    0%, 100% { 
+        opacity: 1;
+        box-shadow: 0 0 20px rgba(245, 87, 108, 0.6);
+    }
+    50% { 
+        opacity: 0.7;
+        box-shadow: 0 0 30px rgba(245, 87, 108, 0.9);
+    }
 }
 
 #gameCanvas {

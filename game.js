@@ -1,11 +1,12 @@
 // Game configuration
 const config = {
-    playerSpeed: 5,
-    bulletSpeed: 7,
+    playerSpeed: 8,
+    bulletSpeed: 10,
     enemySpeed: 2,
     enemySpawnRate: 120,
     enemyBulletSpeed: 4,
-    enemyShootRate: 0.02
+    enemyShootRate: 0.02,
+    shootCooldown: 10
 };
 
 // Game state
@@ -13,7 +14,8 @@ let gameState = {
     running: false,
     score: 0,
     level: 1,
-    health: 100,
+    health: 150,
+    maxHealth: 150,
     highScore: localStorage.getItem('highScore') || 0
 };
 
@@ -38,6 +40,8 @@ let enemyBullets = [];
 let particles = [];
 let keys = {};
 let frameCount = 0;
+let shootCooldownCounter = 0;
+let damageFlashCounter = 0;
 
 // Event Listeners
 document.getElementById('startBtn').addEventListener('click', startGame);
@@ -65,10 +69,11 @@ function startGame() {
         running: true,
         score: 0,
         level: 1,
-        health: 100,
+        health: 150,
+        maxHealth: 150,
         highScore: gameState.highScore
     };
-    
+
     // Reset game objects
     player.x = canvas.width / 2;
     player.y = canvas.height - 80;
@@ -77,11 +82,11 @@ function startGame() {
     enemyBullets = [];
     particles = [];
     frameCount = 0;
-    
+
     // Update UI
     updateUI();
     showScreen('gameScreen');
-    
+
     // Start game loop
     gameLoop();
 }
@@ -99,16 +104,16 @@ function showScreen(screenId) {
 
 function gameLoop() {
     if (!gameState.running) return;
-    
+
     update();
     draw();
-    
+
     requestAnimationFrame(gameLoop);
 }
 
 function update() {
     frameCount++;
-    
+
     // Update player position
     if (keys['ArrowLeft'] && player.x > player.width / 2) {
         player.x -= player.speed;
@@ -116,51 +121,62 @@ function update() {
     if (keys['ArrowRight'] && player.x < canvas.width - player.width / 2) {
         player.x += player.speed;
     }
-    
+
+    // Handle player shooting with cooldown
+    if (keys[' ']) {
+        if (shootCooldownCounter <= 0) {
+            shoot();
+            shootCooldownCounter = config.shootCooldown;
+        }
+    }
+    if (shootCooldownCounter > 0) {
+        shootCooldownCounter--;
+    }
+
     // Update bullets
     bullets = bullets.filter(bullet => {
         bullet.y -= config.bulletSpeed;
         return bullet.y > 0;
     });
-    
+
     // Spawn enemies
     if (frameCount % config.enemySpawnRate === 0) {
         spawnEnemy();
     }
-    
+
     // Update enemies
     enemies = enemies.filter(enemy => {
         enemy.y += config.enemySpeed * (1 + gameState.level * 0.1);
-        
+
         // Enemy shooting
         if (Math.random() < config.enemyShootRate) {
             enemyShoot(enemy);
         }
-        
+
         // Check collision with player
         if (checkCollision(player, enemy)) {
-            takeDamage(20);
+            takeDamage(15);
             createExplosion(enemy.x, enemy.y, '#f5576c');
             return false;
         }
-        
+
         return enemy.y < canvas.height;
     });
-    
+
     // Update enemy bullets
     enemyBullets = enemyBullets.filter(bullet => {
         bullet.y += config.enemyBulletSpeed;
-        
+
         // Check collision with player
         if (checkCollision(player, bullet)) {
-            takeDamage(10);
+            takeDamage(8);
             createExplosion(bullet.x, bullet.y, '#f5576c');
             return false;
         }
-        
+
         return bullet.y < canvas.height;
     });
-    
+
     // Check bullet-enemy collisions
     bullets.forEach((bullet, bulletIndex) => {
         enemies.forEach((enemy, enemyIndex) => {
@@ -172,7 +188,7 @@ function update() {
             }
         });
     });
-    
+
     // Update particles
     particles = particles.filter(particle => {
         particle.x += particle.vx;
@@ -181,7 +197,7 @@ function update() {
         particle.size *= 0.95;
         return particle.life > 0;
     });
-    
+
     // Level up
     if (gameState.score > 0 && gameState.score % 1000 === 0) {
         levelUp();
@@ -192,10 +208,10 @@ function draw() {
     // Clear canvas
     ctx.fillStyle = 'rgba(9, 10, 15, 0.2)';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
+
     // Draw player
     drawPlayer();
-    
+
     // Draw bullets
     bullets.forEach(bullet => {
         ctx.fillStyle = '#667eea';
@@ -204,12 +220,12 @@ function draw() {
         ctx.fillRect(bullet.x - 2, bullet.y - 10, 4, 10);
         ctx.shadowBlur = 0;
     });
-    
+
     // Draw enemies
     enemies.forEach(enemy => {
         drawEnemy(enemy);
     });
-    
+
     // Draw enemy bullets
     enemyBullets.forEach(bullet => {
         ctx.fillStyle = '#f5576c';
@@ -218,7 +234,7 @@ function draw() {
         ctx.fillRect(bullet.x - 2, bullet.y - 5, 4, 10);
         ctx.shadowBlur = 0;
     });
-    
+
     // Draw particles
     particles.forEach(particle => {
         ctx.fillStyle = particle.color;
@@ -231,24 +247,32 @@ function draw() {
 }
 
 function drawPlayer() {
+    // Apply damage flash effect
+    if (player.isFlashing) {
+        ctx.globalAlpha = 0.5 + Math.sin(frameCount * 0.5) * 0.2; // Pulsating transparency
+    } else {
+        ctx.globalAlpha = 1;
+    }
+
     // Player body (triangle spaceship)
     ctx.fillStyle = '#667eea';
     ctx.shadowBlur = 20;
     ctx.shadowColor = '#667eea';
-    
+
     ctx.beginPath();
     ctx.moveTo(player.x, player.y - player.height / 2);
     ctx.lineTo(player.x - player.width / 2, player.y + player.height / 2);
     ctx.lineTo(player.x + player.width / 2, player.y + player.height / 2);
     ctx.closePath();
     ctx.fill();
-    
+
     // Player glow
     ctx.strokeStyle = '#764ba2';
     ctx.lineWidth = 2;
     ctx.stroke();
-    
+
     ctx.shadowBlur = 0;
+    ctx.globalAlpha = 1; // Reset global alpha after drawing player
 }
 
 function drawEnemy(enemy) {
@@ -256,14 +280,14 @@ function drawEnemy(enemy) {
     ctx.fillStyle = '#f5576c';
     ctx.shadowBlur = 15;
     ctx.shadowColor = '#f5576c';
-    
+
     ctx.beginPath();
     ctx.moveTo(enemy.x, enemy.y + enemy.height / 2);
     ctx.lineTo(enemy.x - enemy.width / 2, enemy.y - enemy.height / 2);
     ctx.lineTo(enemy.x + enemy.width / 2, enemy.y - enemy.height / 2);
     ctx.closePath();
     ctx.fill();
-    
+
     ctx.shadowBlur = 0;
 }
 
@@ -296,15 +320,16 @@ function spawnEnemy() {
 
 function checkCollision(obj1, obj2) {
     return obj1.x < obj2.x + obj2.width / 2 &&
-           obj1.x + obj1.width / 2 > obj2.x &&
-           obj1.y < obj2.y + obj2.height / 2 &&
-           obj1.y + obj1.height / 2 > obj2.y;
+        obj1.x + obj1.width / 2 > obj2.x &&
+        obj1.y < obj2.y + obj2.height / 2 &&
+        obj1.y + obj1.height / 2 > obj2.y;
 }
 
 function takeDamage(amount) {
     gameState.health -= amount;
     updateUI();
-    
+    flashScreen();
+
     if (gameState.health <= 0) {
         gameState.health = 0;
         gameOver();
@@ -335,26 +360,89 @@ function createExplosion(x, y, color) {
     }
 }
 
+function flashScreen() {
+    // Create a brief damage flash effect
+    damageFlashCounter = 15;
+}
+
 function updateUI() {
     document.getElementById('score').textContent = gameState.score;
     document.getElementById('level').textContent = gameState.level;
-    document.getElementById('healthBar').style.width = gameState.health + '%';
+
+    // Update segmented health bar
+    const healthPercent = (gameState.health / gameState.maxHealth) * 100;
+    const segmentCount = 5;
+    const healthPerSegment = gameState.maxHealth / segmentCount;
+
+    for (let i = 0; i < segmentCount; i++) {
+        const segment = document.getElementById(`healthSegment${i}`);
+        if (!segment) continue;
+
+        const segmentStartHealth = i * healthPerSegment;
+        const segmentEndHealth = (i + 1) * healthPerSegment;
+
+        if (gameState.health >= segmentEndHealth) {
+            // Segment is full
+            segment.style.width = '100%';
+            segment.style.opacity = '1';
+        } else if (gameState.health > segmentStartHealth) {
+            // Segment is partially filled
+            const segmentFill = ((gameState.health - segmentStartHealth) / healthPerSegment) * 100;
+            segment.style.width = segmentFill + '%';
+            segment.style.opacity = '1';
+        } else {
+            // Segment is empty
+            segment.style.width = '0%';
+            segment.style.opacity = '0.3';
+        }
+
+        // Color based on health percentage
+        if (healthPercent > 60) {
+            segment.style.background = 'linear-gradient(90deg, #10b981 0%, #059669 100%)';
+            segment.style.boxShadow = '0 0 10px rgba(16, 185, 129, 0.6)';
+        } else if (healthPercent > 40) {
+            segment.style.background = 'linear-gradient(90deg, #fbbf24 0%, #f59e0b 100%)';
+            segment.style.boxShadow = '0 0 10px rgba(251, 191, 36, 0.6)';
+        } else if (healthPercent > 20) {
+            segment.style.background = 'linear-gradient(90deg, #fb923c 0%, #f97316 100%)';
+            segment.style.boxShadow = '0 0 10px rgba(251, 146, 60, 0.6)';
+        } else {
+            segment.style.background = 'linear-gradient(90deg, #f093fb 0%, #f5576c 100%)';
+            segment.style.boxShadow = '0 0 15px rgba(245, 87, 108, 0.8)';
+        }
+    }
+
+    // Update health percentage text
+    const healthText = document.getElementById('healthText');
+    if (healthText) {
+        healthText.textContent = Math.max(0, Math.round(healthPercent)) + '%';
+    }
+
+    // Critical health warning
+    const criticalWarning = document.getElementById('criticalWarning');
+    if (criticalWarning) {
+        if (gameState.health <= 30 && gameState.health > 0) {
+            criticalWarning.classList.remove('hidden');
+        } else {
+            criticalWarning.classList.add('hidden');
+        }
+    }
 }
 
 function gameOver() {
     gameState.running = false;
-    
+
     // Update high score
     if (gameState.score > gameState.highScore) {
         gameState.highScore = gameState.score;
         localStorage.setItem('highScore', gameState.highScore);
     }
-    
+
     // Update final stats
     document.getElementById('finalScore').textContent = gameState.score;
     document.getElementById('finalLevel').textContent = gameState.level;
     document.getElementById('highScore').textContent = gameState.highScore;
-    
+
     // Show game over screen
     setTimeout(() => {
         showScreen('gameOverScreen');
