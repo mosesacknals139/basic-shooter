@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="An exciting space shooter game with stunning visuals and smooth gameplay">
+    <title>Cosmic Defender - Space Shooter Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="stars"></div>
+    <div class="stars2"></div>
+    <div class="stars3"></div>
+    
+    <div class="container">
+        <div id="startScreen" class="screen">
+            <h1 class="game-title">
+                <span class="title-cosmic">COSMIC</span>
+                <span class="title-defender">DEFENDER</span>
+            </h1>
+            <p class="tagline">Protect the galaxy from alien invaders</p>
+            <div class="controls-info">
+                <div class="control-item">
+                    <span class="key">←→</span>
+                    <span class="desc">Move</span>
+                </div>
+                <div class="control-item">
+                    <span class="key">SPACE</span>
+                    <span class="desc">Shoot</span>
+                </div>
+            </div>
+            <button id="startBtn" class="btn btn-primary">START GAME</button>
+            <div class="high-score">High Score: <span id="highScore">0</span></div>
+        </div>
+
+        <div id="gameScreen" class="screen hidden">
+            <div class="game-header">
+                <div class="stat-box">
+                    <div class="stat-label">SCORE</div>
+                    <div id="score" class="stat-value">0</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">HEALTH</div>
+                    <div class="health-bar">
+                        <div id="healthBar" class="health-fill"></div>
+                    </div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">LEVEL</div>
+                    <div id="level" class="stat-value">1</div>
+                </div>
+            </div>
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <div id="gameOverScreen" class="screen hidden">
+            <h1 class="game-over-title">GAME OVER</h1>
+            <div class="final-stats">
+                <div class="final-stat">
+                    <span class="final-label">Final Score</span>
+                    <span id="finalScore" class="final-value">0</span>
+                </div>
+                <div class="final-stat">
+                    <span class="final-label">Level Reached</span>
+                    <span id="finalLevel" class="final-value">1</span>
+                </div>
+            </div>
+            <button id="restartBtn" class="btn btn-primary">PLAY AGAIN</button>
+            <button id="menuBtn" class="btn btn-secondary">MAIN MENU</button>
+        </div>
+    </div>
+
+    <script src="game.js"></script>
+</body>
+</html>
