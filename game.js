@@ -16,7 +16,8 @@ let gameState = {
     level: 1,
     health: 150,
     maxHealth: 150,
-    highScore: localStorage.getItem('highScore') || 0
+    highScore: localStorage.getItem('highScore') || 0,
+    lastGiftScore: 0
 };
 
 // Canvas setup
@@ -37,6 +38,7 @@ let player = {
 let bullets = [];
 let enemies = [];
 let enemyBullets = [];
+let gifts = [];
 let particles = [];
 let keys = {};
 let frameCount = 0;
@@ -69,9 +71,9 @@ function startGame() {
         running: true,
         score: 0,
         level: 1,
-        health: 150,
         maxHealth: 150,
-        highScore: gameState.highScore
+        highScore: gameState.highScore,
+        lastGiftScore: 0
     };
 
     // Reset game objects
@@ -80,6 +82,7 @@ function startGame() {
     bullets = [];
     enemies = [];
     enemyBullets = [];
+    gifts = [];
     particles = [];
     frameCount = 0;
 
@@ -198,6 +201,26 @@ function update() {
         return particle.life > 0;
     });
 
+    // Spawn gifts every 500 points
+    if (gameState.score > 0 && gameState.score >= gameState.lastGiftScore + 500) {
+        spawnGift();
+        gameState.lastGiftScore = Math.floor(gameState.score / 500) * 500;
+    }
+
+    // Update gifts
+    gifts = gifts.filter(gift => {
+        gift.y += config.enemySpeed * 0.8; // Gifts move slightly slower than enemies
+
+        // Check collision with player
+        if (checkCollision(player, gift)) {
+            collectGift();
+            createExplosion(gift.x, gift.y, '#10b981'); // Green explosion for collection
+            return false;
+        }
+
+        return gift.y < canvas.height;
+    });
+
     // Level up
     if (gameState.score > 0 && gameState.score % 1000 === 0) {
         levelUp();
@@ -224,6 +247,11 @@ function draw() {
     // Draw enemies
     enemies.forEach(enemy => {
         drawEnemy(enemy);
+    });
+
+    // Draw gifts
+    gifts.forEach(gift => {
+        drawGift(gift);
     });
 
     // Draw enemy bullets
@@ -316,6 +344,59 @@ function spawnEnemy() {
         width: 30,
         height: 30
     });
+}
+
+function spawnGift() {
+    gifts.push({
+        x: Math.random() * (canvas.width - 60) + 30,
+        y: -30,
+        width: 35,
+        height: 35,
+        pulse: 0
+    });
+}
+
+function drawGift(gift) {
+    gift.pulse += 0.05;
+    const pulseSize = Math.sin(gift.pulse) * 5;
+
+    ctx.fillStyle = '#10b981'; // Vibrant green
+    ctx.shadowBlur = 15 + pulseSize;
+    ctx.shadowColor = '#10b981';
+
+    // Draw box with a "ribbon" pattern
+    ctx.fillRect(gift.x - gift.width / 2, gift.y - gift.height / 2, gift.width, gift.height);
+
+    // Ribbon
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(gift.x - 2, gift.y - gift.height / 2, 4, gift.height);
+    ctx.fillRect(gift.x - gift.width / 2, gift.y - 2, gift.width, 4);
+
+    ctx.shadowBlur = 0;
+}
+
+function collectGift() {
+    // Health boost
+    gameState.health = Math.min(gameState.maxHealth, gameState.health + 30);
+    updateUI();
+
+    // Show brief feedback
+    const message = document.createElement('div');
+    message.style.position = 'fixed';
+    message.style.top = '50%';
+    message.style.left = '50%';
+    message.style.transform = 'translate(-50%, -50%)';
+    message.style.color = '#10b981';
+    message.style.fontFamily = 'Orbitron, sans-serif';
+    message.style.fontSize = '2rem';
+    message.style.pointerEvents = 'none';
+    message.style.animation = 'fadeOut 1s forwards';
+    message.textContent = '+30 HEALTH';
+    document.body.appendChild(message);
+
+    setTimeout(() => {
+        message.remove();
+    }, 1000);
 }
 
 function checkCollision(obj1, obj2) {
